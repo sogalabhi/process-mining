@@ -16,30 +16,4 @@ public class ProcessMiningApplication {
                 ProcessMiningApplication.class, args
         );
     }
-
-    @Bean
-    CommandLineRunner testPersistence(ProcessCaseRepository repository) {
-        return args -> {
-
-            ProcessCase processCase = new ProcessCase("ORDER-001");
-
-            processCase.addEvent(
-                    new Event("Order Created", Instant.parse("2026-09-16T10:00:00Z"))
-            );
-
-            processCase.addEvent(
-                    new Event("Payment Received", Instant.parse("2026-09-16T10:02:00Z"))
-            );
-
-            processCase.addEvent(
-                    new Event("Packed", Instant.parse("2026-09-16T10:05:00Z"))
-            );
-
-            repository.save(processCase);
-
-            System.out.println(
-                    "Saved case: " + processCase.getCaseId()
-            );
-        };
-    }
 }
