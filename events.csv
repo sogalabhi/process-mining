@@ -1,5 +1,5 @@
 case_id,activity,timestamp
-ORDER-001,Order Created,2026-09-16T10:00:00Z
+ORDER-001,Order Created,2026-09-16T1000:00Z
 ORDER-001,Payment Received,2026-09-16T10:02:00Z
 ORDER-001,Packed,2026-09-16T10:05:00Z
 ORDER-002,Order Created,2026-09-16T11:00:00Z

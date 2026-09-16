@@ -16,8 +16,29 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.abhi.processmining.exception.InvalidCsvException;
+import java.time.format.DateTimeParseException;
+
 @Service
 public class CsvImportService {
+
+    private void validateRow(EventCsvRow row, long rowNumber) {
+        String caseId = row.caseId();
+        String activity = row.activity();
+
+        if (caseId == null || caseId.isBlank()) {
+            throw new InvalidCsvException(
+                    "Row " + rowNumber + ": case_id is required"
+            );
+        }
+
+        if (activity == null || activity.isBlank()) {
+            throw new InvalidCsvException(
+                    "Row " + rowNumber + ": activity is required"
+            );
+        }
+
+    }
 
     public List<EventCsvRow> parse(MultipartFile file) throws IOException {
 
@@ -39,12 +60,24 @@ public class CsvImportService {
         ) {
 
             for (CSVRecord record : parser) {
+                Instant timestamp;
 
+                try {
+                    timestamp = Instant.parse(record.get("timestamp"));
+                } catch (DateTimeParseException e) {
+                    throw new InvalidCsvException(
+                            "Row " + record.getRecordNumber()
+                                    + ": invalid timestamp: "
+                                    + record.get("timestamp")
+                    );
+                }
                 EventCsvRow row = new EventCsvRow(
                         record.get("case_id"),
                         record.get("activity"),
-                        Instant.parse(record.get("timestamp"))
+                        timestamp
                 );
+
+                validateRow(row, record.getRecordNumber());
 
                 rows.add(row);
             }
