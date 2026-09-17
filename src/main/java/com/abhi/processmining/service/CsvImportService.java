@@ -19,9 +19,59 @@ import org.springframework.stereotype.Service;
 import com.abhi.processmining.exception.InvalidCsvException;
 import java.time.format.DateTimeParseException;
 
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import com.abhi.processmining.model.Event;
+import com.abhi.processmining.model.ProcessCase;
+import com.abhi.processmining.repository.ProcessCaseRepository;
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
 public class CsvImportService {
 
+    private final ProcessCaseRepository processCaseRepository;
+
+    public CsvImportService(ProcessCaseRepository processCaseRepository) {
+        this.processCaseRepository = processCaseRepository;
+    }
+    
+    @Transactional
+    public void importRows(List<EventCsvRow> rows) {
+        Map<String, List<EventCsvRow>> rowsByCase = rows.stream().collect(Collectors.groupingBy(EventCsvRow::caseId));
+
+        for (Map.Entry<String, List<EventCsvRow>> entry : rowsByCase.entrySet()) {
+            String caseId = entry.getKey();
+            List<EventCsvRow> caseRows = entry.getValue();
+
+            if (processCaseRepository.findByCaseId(caseId).isPresent()) {
+                throw new InvalidCsvException(
+                        "Case already exists: " + caseId
+                );
+            }
+            ProcessCase processCase = new ProcessCase(caseId);
+
+            for (EventCsvRow row : caseRows) {
+                Event event = new Event(
+                        row.activity(),
+                        row.timestamp()
+                );
+
+                processCase.addEvent(event);
+            }
+
+            processCaseRepository.save(processCase);
+
+            System.out.println("Case: " + caseId);
+
+            for (EventCsvRow row : caseRows) {
+                System.out.println(
+                        "  " + row.activity()
+                                + " @ " + row.timestamp()
+                );
+            }
+        }
+    }
     private void validateRow(EventCsvRow row, long rowNumber) {
         String caseId = row.caseId();
         String activity = row.activity();

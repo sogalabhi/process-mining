@@ -25,7 +25,7 @@ public class ImportController {
     ) throws IOException {
 
         List<EventCsvRow> rows = csvImportService.parse(file);
-
+        csvImportService.importRows(rows);
         return ResponseEntity.ok(
                 "Parsed " + rows.size() + " rows"
         );
