@@ -3,34 +3,23 @@ package com.abhi.processmining.service;
 import com.abhi.processmining.dto.DfgResponse;
 import com.abhi.processmining.dto.EventResponse;
 import com.abhi.processmining.dto.TransitionResponse;
+import com.abhi.processmining.model.CaseTrace;
 import com.abhi.processmining.model.Event;
 import com.abhi.processmining.model.Transition;
 import com.abhi.processmining.repository.EventRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class DiscoveryService {
 
     private final EventRepository eventRepository;
+    private final EventLogService eventLogService;
 
-    public DiscoveryService(EventRepository eventRepository) {
+    public DiscoveryService(EventRepository eventRepository, EventLogService eventLogService) {
         this.eventRepository = eventRepository;
-    }
-
-    public Map<String, List<Event>> groupEventsByCase(List<Event> events) {
-    return events.stream()
-                .collect(Collectors.groupingBy(
-                        event -> event.getProcessCase().getCaseId(),
-                        LinkedHashMap::new,
-                        Collectors.toList()
-                ));
-    }
-
-    public List<Event> getAllEvents() {
-        return eventRepository.findAllWithProcessCase();
+        this.eventLogService = eventLogService;
     }
 
     public List<EventResponse> getAllEventResponses() {
@@ -47,26 +36,12 @@ public class DiscoveryService {
         );
     }
 
-    public void sortEventsByTimestamp(
-            Map<String, List<Event>> eventsByCase) {
-        for (List<Event> events : eventsByCase.values()) {
-            events.sort(Comparator.comparing(Event::getTimestamp));
-        }
+    public List<CaseTrace> getTraces() {
+        return eventLogService.loadCaseTraces();
     }
 
-    public Map<String, List<String>> buildTraces(
-            Map<String, List<Event>> eventsByCase) {
-        Map<String, List<String>> traces = new LinkedHashMap<>();
-
-        for (Map.Entry<String, List<Event>> entry : eventsByCase.entrySet()) {
-            List<String> activities = entry.getValue().stream()
-                    .map(Event::getActivity)
-                    .toList();
-
-            traces.put(entry.getKey(), activities);
-        }
-
-        return traces;
+    public DfgResponse getDfg() {
+        return buildDfg(eventLogService.loadCaseTraces());
     }
 
     public List<Transition> directlyFollows(List<String> trace) {
@@ -79,11 +54,11 @@ public class DiscoveryService {
         return pairs;
     }
 
-    public Map<Transition, Integer> countTransitions(Map<String, List<String>> traces) {
+    public Map<Transition, Integer> countTransitions(List<CaseTrace> traces) {
         Map<Transition, Integer> counts = new HashMap<>();
 
-        for (List<String> trace : traces.values()) {
-            for (Transition transition : directlyFollows(trace)) {
+        for (CaseTrace trace : traces) {
+            for (Transition transition : directlyFollows(trace.activities())) {
                 counts.merge(transition, 1, Integer::sum);
             }
         }
@@ -91,7 +66,7 @@ public class DiscoveryService {
         return counts;
     }
 
-    public DfgResponse buildDfg(Map<String, List<String>> traces) {
+    public DfgResponse buildDfg(List<CaseTrace> traces) {
         Map<Transition, Integer> counts = countTransitions(traces);
 
         List<TransitionResponse> transitions = counts.entrySet().stream()
@@ -100,11 +75,15 @@ public class DiscoveryService {
                         entry.getKey().to(),
                         entry.getValue()
                 ))
-                .sorted(Comparator.comparingInt(TransitionResponse::count).reversed())
+                .sorted(
+                        Comparator.comparingInt(TransitionResponse::count).reversed().
+                                thenComparing(TransitionResponse::from).
+                                thenComparing(TransitionResponse::to)
+                )
                 .toList();
 
-        List<String> activities = traces.values().stream()
-                .flatMap(List::stream)
+        List<String> activities = traces.stream()
+                .flatMap(trace -> trace.activities().stream())
                 .distinct()
                 .sorted()
                 .toList();
@@ -116,28 +95,21 @@ public class DiscoveryService {
 
     }
 
-    public Map<String, List<String>> getTraces() {
-        List<Event> events = getAllEvents();
-        Map<String, List<Event>> eventsByCase = groupEventsByCase(events);
-        sortEventsByTimestamp(eventsByCase);
-        return buildTraces(eventsByCase);
-    }
-
-    public Map<String, Integer> countStartActivities(Map<String, List<String>> traces) {
+    public Map<String, Integer> countStartActivities(List<CaseTrace> traces) {
         Map<String, Integer> counts = new HashMap<>();
 
-        for (List<String> trace : traces.values()) {
-            counts.merge(trace.getFirst(), 1, Integer::sum);
+        for (CaseTrace trace : traces) {
+            counts.merge(trace.first().activity(), 1, Integer::sum);
         }
 
         return counts;
     }
 
-    public Map<String, Integer> countEndActivities(Map<String, List<String>> traces) {
+    public Map<String, Integer> countEndActivities(List<CaseTrace> traces) {
         Map<String, Integer> counts = new HashMap<>();
 
-        for (List<String> trace : traces.values()) {
-            counts.merge(trace.getLast(), 1, Integer::sum);
+        for (CaseTrace trace : traces) {
+            counts.merge(trace.last().activity(), 1, Integer::sum);
         }
 
         return counts;

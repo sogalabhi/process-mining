@@ -1,0 +1,67 @@
+Phase 3 — Process Discovery
+
+15. Define DFG output          ✅
+16. Discovery API              ✅
+17. Retrieve events from DB    ✅
+18. Group events by case       ✅
+19. Sort events chronologically ✅
+20. Build process traces       ✅
+21. Generate directly-follows pairs ✅
+22. Count transitions          ✅
+23. Create transition DTO      ✅
+24. Build complete DFG         ✅
+25. Identify start/end activities ✅
+26. Handle loops               ✅
+27. Handle self-loops          ✅
+28. Return DFG API response    ✅
+29. Test algorithm             ✅
+30. Complexity/scalability     ← NOW2
+
+Phase 4 — Process Analytics
+
+Idea: build reusable data preparation once → apply different math → return different DTOs.
+All metrics are projections over the same prepared data (case → sorted events) from Phase 3.
+
+31. Analytics base pipeline    ✅ (EventLogService → List<CaseTrace>)
+32. Process variants           🟡 (group identical traces, count frequency)
+33. Variant percentages        🟡 (frequency / total cases × 100)
+34. Case durations             🟡 (last timestamp − first timestamp)
+35. Duration statistics        🟡 (avg, min, max, median, P90/P95)
+36. Activity frequencies       🟡 (count occurrences of each activity)
+37. Transition durations       🟡 (time between consecutive events)
+38. Transition statistics      🟡 (frequency + avg/min/max duration per A → B)
+39. Bottleneck detection       🟡 (high-duration transitions)
+40. Rework analysis            🟡 (repeated activities within traces)
+41. Start/end statistics       🟡 (most common start and end activities)
+42. Throughput                 🟡 (cases completed per time period)
+43. Analytics DTOs             🟡 (reusable response structures)
+44. Analytics API              🟡 (expose statistics through REST)
+45. Testing                    🟡 (verify metrics against known cases)
+46. Complexity/scalability     (computation and DB implications)  ← NOW
+
+🟡 = built + unit-tested, waiting for curl check against real data
+
+Architecture:
+
+                   Event Log
+                       ↓
+                Analytics Base
+                       ↓
+              case → sorted events
+                       │
+       ┌───────────────┼────────────────┐
+       ↓               ↓                ↓
+    Variants        Durations       Frequencies
+       ↓               ↓                ↓
+ percentages      statistics       aggregations
+       │               │                │
+       └───────────────┼────────────────┘
+                       ↓
+                 Analytics API
+
+Implementation chunks:
+
+Chunk A — Variants                       31–33
+Chunk B — Time analytics                 34–35, 37–39
+Chunk C — Frequency/process behavior     36, 40–42
+Chunk D — API + quality                  43–46

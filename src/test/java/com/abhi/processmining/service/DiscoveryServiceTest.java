@@ -2,7 +2,8 @@ package com.abhi.processmining.service;
 
 import com.abhi.processmining.dto.DfgResponse;
 import com.abhi.processmining.dto.TransitionResponse;
-import com.abhi.processmining.model.Event;
+import com.abhi.processmining.model.CaseTrace;
+import com.abhi.processmining.model.TraceEvent;
 import com.abhi.processmining.model.Transition;
 import org.junit.jupiter.api.Test;
 
@@ -14,28 +15,13 @@ import static org.assertj.core.api.Assertions.entry;
 
 class DiscoveryServiceTest {
 
-    private final DiscoveryService service = new DiscoveryService(null);
+    private final DiscoveryService service = new DiscoveryService(null, null);
 
     @Test
     void singleActivityTraceHasNoPairs() {
         var pairs = service.directlyFollows(List.of("Order Created"));
 
         assertThat(pairs).isEmpty();
-    }
-
-    @Test
-    void sortsEventsByTimestamp() {
-        Map<String, List<Event>> eventsByCase = new HashMap<>();
-        eventsByCase.put("ORDER-900", new ArrayList<>(List.of(
-                new Event("Shipped", Instant.parse("2026-09-18T12:00:00Z")),
-                new Event("Order Created", Instant.parse("2026-09-18T10:00:00Z")),
-                new Event("Packed", Instant.parse("2026-09-18T11:00:00Z"))
-        )));
-
-        service.sortEventsByTimestamp(eventsByCase);
-
-        assertThat(service.buildTraces(eventsByCase).get("ORDER-900"))
-                .containsExactly("Order Created", "Packed", "Shipped");
     }
 
     @Test
@@ -50,10 +36,10 @@ class DiscoveryServiceTest {
 
     @Test
     void countsTransitionsAcrossCases() {
-        Map<String, List<String>> traces = Map.of(
-                "1", List.of("A", "B", "C", "D"),
-                "2", List.of("A", "B", "C", "D"),
-                "3", List.of("A", "B", "D")
+        List<CaseTrace> traces = List.of(
+                trace("1", "A", "B", "C", "D"),
+                trace("2", "A", "B", "C", "D"),
+                trace("3", "A", "B", "D")
         );
 
         Map<Transition, Integer> counts = service.countTransitions(traces);
@@ -68,8 +54,8 @@ class DiscoveryServiceTest {
 
     @Test
     void loopCountsBothDirectionsPerOccurrence() {
-        Map<String, List<String>> traces = Map.of(
-                "1", List.of("Packed", "Inspected", "Packed", "Inspected", "Packed")
+        List<CaseTrace> traces = List.of(
+                trace("1", "Packed", "Inspected", "Packed", "Inspected", "Packed")
         );
 
         assertThat(service.countTransitions(traces)).containsOnly(
@@ -80,8 +66,8 @@ class DiscoveryServiceTest {
 
     @Test
     void selfLoopIsCountedLikeAnyTransition() {
-        Map<String, List<String>> traces = Map.of(
-                "1", List.of("Payment Attempt", "Payment Attempt", "Payment Attempt")
+        List<CaseTrace> traces = List.of(
+                trace("1", "Payment Attempt", "Payment Attempt", "Payment Attempt")
         );
 
         assertThat(service.countTransitions(traces)).containsOnly(
@@ -91,10 +77,10 @@ class DiscoveryServiceTest {
 
     @Test
     void countsStartAndEndActivities() {
-        Map<String, List<String>> traces = Map.of(
-                "1", List.of("A", "B", "C"),
-                "2", List.of("A", "C"),
-                "3", List.of("A")
+        List<CaseTrace> traces = List.of(
+                trace("1", "A", "B", "C"),
+                trace("2", "A", "C"),
+                trace("3", "A")
         );
 
         assertThat(service.countStartActivities(traces)).containsOnly(entry("A", 3));
@@ -103,11 +89,11 @@ class DiscoveryServiceTest {
 
     @Test
     void dfgIncludesLoneActivitiesAndSortsTransitionsByCount() {
-        Map<String, List<String>> traces = Map.of(
-                "1", List.of("A", "B"),
-                "2", List.of("A", "B"),
-                "3", List.of("B", "C"),
-                "4", List.of("X")
+        List<CaseTrace> traces = List.of(
+                trace("1", "A", "B"),
+                trace("2", "A", "B"),
+                trace("3", "B", "C"),
+                trace("4", "X")
         );
 
         DfgResponse dfg = service.buildDfg(traces);
@@ -117,5 +103,16 @@ class DiscoveryServiceTest {
                 new TransitionResponse("A", "B", 2),
                 new TransitionResponse("B", "C", 1)
         );
+    }
+
+    private static CaseTrace trace(String caseId, String... activities) {
+        Instant start = Instant.parse("2026-01-01T00:00:00Z");
+        List<TraceEvent> events = new ArrayList<>();
+
+        for (int i = 0; i < activities.length; i++) {
+            events.add(new TraceEvent(activities[i], start.plusSeconds(i)));
+        }
+
+        return new CaseTrace(caseId, events);
     }
 }
