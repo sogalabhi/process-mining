@@ -109,7 +109,11 @@ public class DiscoveryService {
                 .sorted()
                 .toList();
 
-        return new DfgResponse(activities, transitions);
+        Map<String, Integer> startActivities = countStartActivities(traces);
+        Map<String, Integer> endActivities = countEndActivities(traces);
+
+        return new DfgResponse(activities, transitions, startActivities, endActivities);
+
     }
 
     public Map<String, List<String>> getTraces() {
@@ -117,5 +121,25 @@ public class DiscoveryService {
         Map<String, List<Event>> eventsByCase = groupEventsByCase(events);
         sortEventsByTimestamp(eventsByCase);
         return buildTraces(eventsByCase);
+    }
+
+    public Map<String, Integer> countStartActivities(Map<String, List<String>> traces) {
+        Map<String, Integer> counts = new HashMap<>();
+
+        for (List<String> trace : traces.values()) {
+            counts.merge(trace.getFirst(), 1, Integer::sum);
+        }
+
+        return counts;
+    }
+
+    public Map<String, Integer> countEndActivities(Map<String, List<String>> traces) {
+        Map<String, Integer> counts = new HashMap<>();
+
+        for (List<String> trace : traces.values()) {
+            counts.merge(trace.getLast(), 1, Integer::sum);
+        }
+
+        return counts;
     }
 }
