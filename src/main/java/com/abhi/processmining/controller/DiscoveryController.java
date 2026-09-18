@@ -1,5 +1,6 @@
 package com.abhi.processmining.controller;
 
+import com.abhi.processmining.dto.DfgResponse;
 import com.abhi.processmining.model.Event;
 import com.abhi.processmining.model.Transition;
 import com.abhi.processmining.service.DiscoveryService;
@@ -29,20 +30,12 @@ public class DiscoveryController {
 
     @GetMapping("/traces")
     public Map<String, List<String>> getGroupedAndSortedEvents() {
-
-        List<Event> events = discoveryService.getAllEvents();
-        Map<String, List<Event>> eventsmap = discoveryService.groupEventsByCase(events);
-        discoveryService.sortEventsByTimestamp(eventsmap);
-        return discoveryService.buildTraces(eventsmap);
+        return discoveryService.getTraces();
     }
 
-    @GetMapping("/transitions")
-    public Map<Transition, Integer> getTransitions() {
-        List<Event> events = discoveryService.getAllEvents();
-        Map<String, List<Event>> eventsByCase = discoveryService.groupEventsByCase(events);
-        discoveryService.sortEventsByTimestamp(eventsByCase);
-        Map<String, List<String>> traces = discoveryService.buildTraces(eventsByCase);
-        return discoveryService.countTransitions(traces);
+    @GetMapping("/dfg")
+    public DfgResponse getDfg() {
+        return discoveryService.buildDfg(discoveryService.getTraces());
     }
     
 }

@@ -1,6 +1,8 @@
 package com.abhi.processmining.service;
 
+import com.abhi.processmining.dto.DfgResponse;
 import com.abhi.processmining.dto.EventResponse;
+import com.abhi.processmining.dto.TransitionResponse;
 import com.abhi.processmining.model.Event;
 import com.abhi.processmining.model.Transition;
 import com.abhi.processmining.repository.EventRepository;
@@ -87,5 +89,33 @@ public class DiscoveryService {
         }
 
         return counts;
+    }
+
+    public DfgResponse buildDfg(Map<String, List<String>> traces) {
+        Map<Transition, Integer> counts = countTransitions(traces);
+
+        List<TransitionResponse> transitions = counts.entrySet().stream()
+                .map(entry -> new TransitionResponse(
+                        entry.getKey().from(),
+                        entry.getKey().to(),
+                        entry.getValue()
+                ))
+                .sorted(Comparator.comparingInt(TransitionResponse::count).reversed())
+                .toList();
+
+        List<String> activities = traces.values().stream()
+                .flatMap(List::stream)
+                .distinct()
+                .sorted()
+                .toList();
+
+        return new DfgResponse(activities, transitions);
+    }
+
+    public Map<String, List<String>> getTraces() {
+        List<Event> events = getAllEvents();
+        Map<String, List<Event>> eventsByCase = groupEventsByCase(events);
+        sortEventsByTimestamp(eventsByCase);
+        return buildTraces(eventsByCase);
     }
 }
