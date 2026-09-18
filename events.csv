@@ -2,4 +2,4 @@ case_id,activity,timestamp
 ORDER-301,Order Created,2026-09-17T10:00:00Z
 ORDER-301,Payment Received,2026-09-17T10:02:00Z
 ORDER-301,Packed,2026-09-17T10:05:00Z
-ORDER-302,Order Created,2026-09-17T11:00:00Z
+ORDER-302,Order Created,2026-09-17T11:00:00Zs
