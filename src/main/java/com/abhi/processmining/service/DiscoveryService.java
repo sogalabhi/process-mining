@@ -2,14 +2,13 @@ package com.abhi.processmining.service;
 
 import com.abhi.processmining.dto.EventResponse;
 import com.abhi.processmining.model.Event;
+import com.abhi.processmining.model.Transition;
 import com.abhi.processmining.repository.EventRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.Comparator;
+
 @Service
 public class DiscoveryService {
 
@@ -68,4 +67,25 @@ public class DiscoveryService {
         return traces;
     }
 
+    public List<Transition> directlyFollows(List<String> trace) {
+        List<Transition> pairs = new ArrayList<>();
+
+        for (int i = 0; i < trace.size() - 1; i++) {
+            pairs.add(new Transition(trace.get(i), trace.get(i + 1)));
+        }
+
+        return pairs;
+    }
+
+    public Map<Transition, Integer> countTransitions(Map<String, List<String>> traces) {
+        Map<Transition, Integer> counts = new HashMap<>();
+
+        for (List<String> trace : traces.values()) {
+            for (Transition transition : directlyFollows(trace)) {
+                counts.merge(transition, 1, Integer::sum);
+            }
+        }
+
+        return counts;
+    }
 }
