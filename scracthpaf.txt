@@ -23,23 +23,21 @@ Idea: build reusable data preparation once → apply different math → return d
 All metrics are projections over the same prepared data (case → sorted events) from Phase 3.
 
 31. Analytics base pipeline    ✅ (EventLogService → List<CaseTrace>)
-32. Process variants           🟡 (group identical traces, count frequency)
-33. Variant percentages        🟡 (frequency / total cases × 100)
-34. Case durations             🟡 (last timestamp − first timestamp)
-35. Duration statistics        🟡 (avg, min, max, median, P90/P95)
-36. Activity frequencies       🟡 (count occurrences of each activity)
-37. Transition durations       🟡 (time between consecutive events)
-38. Transition statistics      🟡 (frequency + avg/min/max duration per A → B)
-39. Bottleneck detection       🟡 (high-duration transitions)
-40. Rework analysis            🟡 (repeated activities within traces)
-41. Start/end statistics       🟡 (most common start and end activities)
-42. Throughput                 🟡 (cases completed per time period)
-43. Analytics DTOs             🟡 (reusable response structures)
-44. Analytics API              🟡 (expose statistics through REST)
-45. Testing                    🟡 (verify metrics against known cases)
-46. Complexity/scalability     (computation and DB implications)  ← NOW
-
-🟡 = built + unit-tested, waiting for curl check against real data
+32. Process variants           ✅ (group identical traces, count frequency)
+33. Variant percentages        ✅ (frequency / total cases × 100)
+34. Case durations             ✅ (last timestamp − first timestamp)
+35. Duration statistics        ✅ (avg, min, max, median, P90/P95)
+36. Activity frequencies       ✅ (count occurrences of each activity)
+37. Transition durations       ✅ (time between consecutive events)
+38. Transition statistics      ✅ (frequency + avg/min/max duration per A → B)
+39. Bottleneck detection       ✅ (high-duration transitions)
+40. Rework analysis            ✅ (repeated activities within traces)
+41. Start/end statistics       ✅ (most common start and end activities)
+42. Throughput                 ✅ (cases completed per time period)
+43. Analytics DTOs             ✅ (reusable response structures)
+44. Analytics API              ✅ (expose statistics through REST)
+45. Testing                    ✅ (verify metrics against known cases)
+46. Complexity/scalability     (computation and DB implications)  ← NOW (reference answers in notes §12; review later)
 
 Architecture:
 
@@ -65,3 +63,42 @@ Chunk A — Variants                       31–33
 Chunk B — Time analytics                 34–35, 37–39
 Chunk C — Frequency/process behavior     36, 40–42
 Chunk D — API + quality                  43–46
+
+Phase 5 — Conformance Checking
+
+Idea: expected sequence (POST body) → align every case against it with an edit-distance DP
+      → per-case deviations + fitness → summary. Input reuses loadCaseTraces() from Phase 4.
+
+47. Reference model format       ✅ (expected sequence: ConformanceRequest, @NotEmpty → 400)
+48. Conformance API              ✅ (POST /api/conformance)
+49. Reuse loadCaseTraces()       ✅
+50. Move types                   ✅ (MATCH / SKIPPED / EXTRA, no substitution)
+51. DP cost table                ✅ (cost[i][j] = cheapest alignment of actual[i..] with expected[j..])
+52. Trace-back → alignment       ✅ (walk from (0,0), prefer MATCH > EXTRA > SKIPPED on ties)
+53. Deviations per case          ✅ (the non-MATCH moves)
+54. Fitness score                ✅ (1 − cost / (actual + expected))
+55. Summary                      ✅ (fitting cases/%, average fitness, deviation counts per case)
+56. Testing                      ✅ (ConformanceServiceTest, 8 tests)
+57. Understand the flow          ← NOW (walkthrough of DP + trace-back by hand)
+58. Loops / optional activities  (limitation of a single sequence — explain, maybe allowed-transitions later)
+59. Complexity/scalability       (O(m × k) per case; memory; parallel activities out of scope)
+
+Phase 7 — Frontend (built before Phase 6 on purpose, to see the product)
+
+60. Stack + scaffold              ✅ (React + Vite + Tailwind v4, JS; frontend/)
+61. Design tokens + dark toggle   ✅ (warehouse palette, IBM Plex, no Tailwind default colors)
+62. Synthetic data generator      ✅ (frontend/scripts/generate-log.mjs, 2,500 GEN- cases, planted patterns)
+63. Process map                   ✅ (React Flow + elkjs, frequency/performance, slider, start/end, rework)
+64. Edge / activity side panel    ✅ (min/median/avg/P90/P95/max, distribution bar)
+65. Slowest steps                 ✅ (/bottlenecks with top + minFrequency controls)
+66. Variant explorer              ✅ (click → spotlight on map + replay filter)
+67. Token replay                  ✅ (canvas, shared clock, sweep, queue bars, scrubber, speeds)
+68. Duration histogram            ✅ (median / avg / P90 / P95 lines)
+69. Throughput calendar           ✅ (endActivity dropdown, weekday vs weekend)
+70. Case timeline                 ✅ (longest / rework / not finished, click → trace)
+71. CSV import (button + drop)    ✅
+72. Understand + notes            ← NOW (notes §16)
+73. README with screenshots/GIF   (light + dark via <picture>)
+74. Stretch: replay-synced views, Sankey (unrolled), conformance overlay
+
+(Phase 6 hardening items to be renumbered after 74.)

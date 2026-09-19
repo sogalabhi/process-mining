@@ -14,6 +14,7 @@ I'd rate them like this for **you specifically**, given that you already know pr
 | **7. Frontend**                | 🟢 **3/10** | You already know web development                        |
 | **8. Testing & Documentation** | 🟠 **6/10** | Testing concepts + integration behavior                 |
 | **9. Interview Defense**       | 🔴 **9/10** | Understanding the *why* behind everything               |
+| **10. Predictive Monitoring (ML)** | 🟠 **7/10** | Feature design, leakage-free evaluation, serving a model |
 
 ---
 
@@ -656,6 +657,103 @@ Because you need to be able to answer:
 ### Process mining
 
 > Why can't normal application validation solve this problem?
+
+---
+
+# Phase 10 — Predictive Process Monitoring (ML)
+
+### **7/10**
+
+> **Planned for later: after Phase 6 (hardening).** Training reads the whole event log, so Phase 6's caching and projection queries should be in place first. Time-box it to about 2 days.
+
+Phases 3–5 look **backwards**: what happened, how fast, and whether it followed the rules.
+
+This phase looks **forwards**, at the cases that are still open:
+
+```text
+GEN-01234 is at "Packed", 5h since payment, on a Saturday
+        ↓
+Predicted delivery in 9h 20m
+Risk of stalling: 34%
+```
+
+This is a standard research area in process mining called **predictive process monitoring**.
+
+### What we'll build
+
+| # | Prediction | Type | Baseline to beat |
+|---|---|---|---|
+| 1 | **Remaining time** of an open case | regression | average remaining time from the current activity |
+| 2 | **Risk**: will the case stall or need rework? | classification | historical rate at the current activity |
+| 3 | *(cheap warm-up)* **Next activity** | classification | the DFG itself: `count(A→B) / count(A→*)`, a first-order Markov model, no library needed |
+| 4 | *(optional)* Anomalous cases | unsupervised | conformance fitness from Phase 5 |
+
+Focus on **1 + 2**. #3 is a one-hour warm-up with no ML library.
+
+### The pipeline
+
+```text
+loadCaseTraces()                     ← same pipeline as Phases 4–5
+        ↓
+finished cases → prefixes            ← a case with k events gives k training rows
+        ↓                              ("state after 3 events → actual remaining time")
+features
+  current activity
+  elapsed time, time since last event
+  number of events, repeats, payment attempts
+  weekday, hour
+        ↓
+time-based split                     ← train on the first ~10 days, test on the last ~4
+        ↓
+model (gradient-boosted trees)
+        ↓
+evaluate against the baseline        ← MAE for time, precision/recall for risk
+        ↓
+GET /api/predictions/open-cases
+        ↓
+dashboard: predicted finish + at-risk marker on the replay dots
+```
+
+### Where the model runs
+
+**Java with Tribuo** (Oracle's Java ML library): gradient-boosted trees and random forests inside the same Spring Boot app.
+
+It keeps one deployable, and every step can be explained in Java. The alternative (scikit-learn exported to ONNX) is more standard for ML, but adds a second language and a build step.
+
+### Why it's difficult
+
+Not the model call.
+
+It's the design decisions:
+
+```text
+Which features are known at prediction time?     (no future information)
+How do we split train/test?                      (by time, never randomly)
+What is the baseline?                            (a model that can't beat the average isn't useful)
+When do we retrain?                              (after each import? nightly?)
+```
+
+**Data leakage** is the classic trap here. Case durations drift over time, so a random split puts future cases in training and makes the model look better than it is.
+
+### Honest limits
+
+The data is synthetic, so the model partly re-learns the generator's rules.
+
+That's fine as long as you say it. The planted patterns are exactly what it should find: weekend packing is 1.8× slower, and the average baseline can't see that.
+
+Running it on a real **BPI Challenge** log would make the result much stronger.
+
+### Interview questions to be ready for
+
+> "How did you avoid data leakage?"
+
+> "Why gradient-boosted trees and not a neural network?"
+
+> "How much better than the baseline is it, and is that worth the complexity?"
+
+> "What happens when the process changes (concept drift)?"
+
+> "Why train inside the Java app instead of a Python service?"
 
 ---
 

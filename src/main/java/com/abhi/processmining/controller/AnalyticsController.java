@@ -2,6 +2,8 @@ package com.abhi.processmining.controller;
 
 import com.abhi.processmining.dto.analytics.*;
 import com.abhi.processmining.service.AnalyticsService;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -41,8 +43,8 @@ public class AnalyticsController {
 
     @GetMapping("/bottlenecks")
     public List<TransitionStatsResponse> getBottlenecks(
-            @RequestParam(defaultValue = "3") int top,
-            @RequestParam(defaultValue = "2") int minFrequency
+            @RequestParam(defaultValue = "3") @Min(1) @Max(50) int top,
+            @RequestParam(defaultValue = "2") @Min(1) int minFrequency
     ) {
         return analyticsService.getBottlenecks(top, minFrequency);
     }
