@@ -1,0 +1,164 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --paper: #f3f1ec;
+  --surface: #fbfaf7;
+  --ink: #1c1b19;
+  --muted: #6b675f;
+  --border: #d9d5cc;
+  --faint: #e8e4dc;
+  --signal: #d9480f;
+  --rework: #1f6f78;
+
+  --dur-1: #cfc9be;
+  --dur-2: #b3a694;
+  --dur-3: #9a7b5e;
+  --dur-4: #a2512b;
+  --dur-5: #7f2a10;
+
+  --act-1: #6e7b3c;
+  --act-2: #4d6a8c;
+  --act-3: #7b4f72;
+  --act-4: #a08a5c;
+  --act-5: #4f7a5b;
+  --act-6: #6a678f;
+  --act-7: #7c6f63;
+  --act-8: #5b4a3f;
+}
+
+.dark {
+  --paper: #161513;
+  --surface: #1f1e1b;
+  --ink: #ece8e1;
+  --muted: #9a958b;
+  --border: #34322d;
+  --faint: #292724;
+  --signal: #ff7a2e;
+  --rework: #4fa3ac;
+
+  --dur-1: #3d3a35;
+  --dur-2: #5e564b;
+  --dur-3: #8c6a4a;
+  --dur-4: #c8622f;
+  --dur-5: #ff8a4c;
+
+  --act-1: #a3b06a;
+  --act-2: #87a3c4;
+  --act-3: #b58aab;
+  --act-4: #cdb888;
+  --act-5: #86b08f;
+  --act-6: #a4a1c8;
+  --act-7: #b3a698;
+  --act-8: #9c8a7c;
+}
+
+@theme inline {
+  --color-*: initial;
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-faint: var(--faint);
+  --color-signal: var(--signal);
+  --color-rework: var(--rework);
+  --color-transparent: transparent;
+
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --radius-sm: 3px;
+  --radius-md: 5px;
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+input[type='range'] {
+  accent-color: var(--ink);
+}
+
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-edge-label-background-color: var(--paper);
+}
+
+.react-flow__controls {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.react-flow__controls-button {
+  width: 26px;
+  height: 26px;
+  padding: 6px;
+  background: var(--surface);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: 0;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--faint);
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor;
+  max-width: 12px;
+  max-height: 12px;
+}
+
+.react-flow__attribution {
+  background: transparent;
+  font-size: 9px;
+}
+
+.react-flow__attribution a {
+  color: var(--muted);
+}
+
+.react-flow__node {
+  cursor: pointer;
+}
+
+.react-flow__edge-textwrapper,
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: inherit;
+}
