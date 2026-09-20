@@ -4,6 +4,7 @@ import com.abhi.processmining.dto.analytics.*;
 import com.abhi.processmining.service.AnalyticsService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -61,8 +62,9 @@ public class AnalyticsController {
 
     @GetMapping("/throughput")
     public ThroughputResponse getThroughput(
-            @RequestParam(required = false) String endActivity
+            @RequestParam(required = false) @Size(max = 255) String endActivity
     ) {
-        return analyticsService.getThroughput(endActivity);
+        String activity = endActivity == null || endActivity.isBlank() ? null : endActivity.strip();
+        return analyticsService.getThroughput(activity);
     }
 }

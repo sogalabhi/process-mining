@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -29,6 +30,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CsvImportService {
+
+    private static final List<String> REQUIRED_COLUMNS = List.of("case_id", "activity", "timestamp");
+    private static final int MAX_VALUE_LENGTH = 255;
 
     private final ProcessCaseRepository processCaseRepository;
 
@@ -88,9 +92,44 @@ public class CsvImportService {
             );
         }
 
+        if (caseId.length() > MAX_VALUE_LENGTH) {
+            throw new InvalidCsvException(
+                    "Row " + rowNumber + ": case_id is longer than " + MAX_VALUE_LENGTH + " characters"
+            );
+        }
+
+        if (activity.length() > MAX_VALUE_LENGTH) {
+            throw new InvalidCsvException(
+                    "Row " + rowNumber + ": activity is longer than " + MAX_VALUE_LENGTH + " characters"
+            );
+        }
+    }
+
+    private void validateHeader(List<String> headerNames) {
+        List<String> missing = REQUIRED_COLUMNS.stream()
+                .filter(column -> !headerNames.contains(column))
+                .toList();
+
+        if (!missing.isEmpty()) {
+            throw new InvalidCsvException(
+                    "Missing column(s) " + missing + ". Expected header: " + String.join(",", REQUIRED_COLUMNS)
+                            + ", found: " + String.join(",", headerNames)
+            );
+        }
+    }
+
+    private void skipByteOrderMark(BufferedReader reader) throws IOException {
+        reader.mark(1);
+        if (reader.read() != '\uFEFF') {
+            reader.reset();
+        }
     }
 
     public List<EventCsvRow> parse(MultipartFile file) throws IOException {
+
+        if (file == null || file.isEmpty()) {
+            throw new InvalidCsvException("File is empty");
+        }
 
         List<EventCsvRow> rows = new ArrayList<>();
 
@@ -100,37 +139,59 @@ public class CsvImportService {
                                 file.getInputStream(),
                                 StandardCharsets.UTF_8
                         )
-                );
-
-                CSVParser parser = CSVFormat.DEFAULT.builder()
-                        .setHeader()
-                        .setSkipHeaderRecord(true)
-                        .build()
-                        .parse(reader)
+                )
         ) {
+            skipByteOrderMark(reader);
 
-            for (CSVRecord record : parser) {
-                Instant timestamp;
+            try (
+                    CSVParser parser = CSVFormat.DEFAULT.builder()
+                            .setHeader()
+                            .setSkipHeaderRecord(true)
+                            .setTrim(true)
+                            .build()
+                            .parse(reader)
+            ) {
+                validateHeader(parser.getHeaderNames());
 
-                try {
-                    timestamp = Instant.parse(record.get("timestamp"));
-                } catch (DateTimeParseException e) {
-                    throw new InvalidCsvException(
-                            "Row " + record.getRecordNumber()
-                                    + ": invalid timestamp: "
-                                    + record.get("timestamp")
+                for (CSVRecord record : parser) {
+                    long rowNumber = record.getRecordNumber();
+
+                    if (!record.isConsistent()) {
+                        throw new InvalidCsvException(
+                                "Row " + rowNumber + ": expected " + parser.getHeaderNames().size()
+                                        + " values, found " + record.size()
+                        );
+                    }
+
+                    Instant timestamp;
+
+                    try {
+                        timestamp = Instant.parse(record.get("timestamp"));
+                    } catch (DateTimeParseException e) {
+                        throw new InvalidCsvException(
+                                "Row " + rowNumber
+                                        + ": invalid timestamp: "
+                                        + record.get("timestamp")
+                                        + " (expected ISO-8601 UTC, e.g. 2026-08-01T10:00:00Z)"
+                        );
+                    }
+                    EventCsvRow row = new EventCsvRow(
+                            record.get("case_id"),
+                            record.get("activity"),
+                            timestamp
                     );
+
+                    validateRow(row, rowNumber);
+
+                    rows.add(row);
                 }
-                EventCsvRow row = new EventCsvRow(
-                        record.get("case_id"),
-                        record.get("activity"),
-                        timestamp
-                );
-
-                validateRow(row, record.getRecordNumber());
-
-                rows.add(row);
+            } catch (UncheckedIOException | IllegalArgumentException | IllegalStateException e) {
+                throw new InvalidCsvException("Malformed CSV: " + e.getMessage());
             }
+        }
+
+        if (rows.isEmpty()) {
+            throw new InvalidCsvException("CSV has a header but no data rows");
         }
 
         return rows;

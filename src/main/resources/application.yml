@@ -15,3 +15,7 @@ spring:
 
   application:
     name: process-mining
+server:
+  error:
+    include-stacktrace: never
+    include-exception: false
