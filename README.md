@@ -13,5 +13,3 @@
 
 1. Java spring boot
 2. React
-
-Proud to say that after a long time, built a project without using agentic ai(except frontend). Even this readme file is written wihout ai :)
